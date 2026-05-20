@@ -6,12 +6,12 @@ Student implementation inspired by Bharathi et al. (2023):
 in nailfold capillary images."
 
 This is a simplified implementation for coursework.
-It uses the professor-provided folders:
+I used the professors-provided folders:
 - Segmentation.zip: native images + binary masks
 - Density.zip: density images with 1 mm scale + native versions + count annotations
 
 Main tasks implemented:
-1. Prepare segmentation dataset
+1. I Prepared segmentation dataset
 2. Train U-Net for capillary/vessel segmentation
 3. Predict segmentation masks and overlays
 4. Calculate simple measurements from segmentation masks
@@ -54,9 +54,9 @@ from torch.utils.data import Dataset, DataLoader
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
 
-# ---------------------------------------------------------
+
 # Basic utilities
-# ---------------------------------------------------------
+
 
 def seed_everything(seed: int = 42) -> None:
     random.seed(seed)
@@ -104,9 +104,9 @@ def save_overlay(gray01: np.ndarray, mask01: np.ndarray, out_path: Path) -> None
     cv2.imwrite(str(out_path), overlay)
 
 
-# ---------------------------------------------------------
+
 # Prepare professor data
-# ---------------------------------------------------------
+
 
 def parse_density_ground_truth(pdf_path: Path, out_csv: Path) -> pd.DataFrame:
     """
@@ -199,9 +199,9 @@ def prepare(args) -> None:
     print(f"Prepared data saved to: {prepared_dir}")
 
 
-# ---------------------------------------------------------
+
 # Dataset
-# ---------------------------------------------------------
+
 
 class SegmentationDataset(Dataset):
     def __init__(self, image_dir: Path, mask_dir: Path, size: int = 256):
@@ -227,9 +227,9 @@ class SegmentationDataset(Dataset):
         )
 
 
-# ---------------------------------------------------------
+
 # U-Net model
-# ---------------------------------------------------------
+
 
 class DoubleConv(nn.Module):
     def __init__(self, in_ch: int, out_ch: int):
@@ -286,9 +286,9 @@ class UNet(nn.Module):
         return self.out(d1)
 
 
-# ---------------------------------------------------------
+
 # Loss and metrics
-# ---------------------------------------------------------
+
 
 class DiceBCELoss(nn.Module):
     def __init__(self):
@@ -316,9 +316,9 @@ def dice_iou(logits, targets, threshold=0.5) -> Tuple[float, float]:
     return dice, iou
 
 
-# ---------------------------------------------------------
+
 # Measurements
-# ---------------------------------------------------------
+
 
 def clean_mask(mask01: np.ndarray) -> np.ndarray:
     mask = (mask01 > 0.5).astype(np.uint8)
@@ -422,9 +422,9 @@ def estimate_scale_line_px(image_path: Path) -> float:
     return max(lengths) if lengths else float("nan")
 
 
-# ---------------------------------------------------------
+
 # Train, predict, density
-# ---------------------------------------------------------
+
 
 def train(args) -> None:
     seed_everything(args.seed)
@@ -597,9 +597,9 @@ def density(args) -> None:
     print(df.head())
 
 
-# ---------------------------------------------------------
+
 # Main
-# ---------------------------------------------------------
+
 
 def parse_args():
     p = argparse.ArgumentParser()

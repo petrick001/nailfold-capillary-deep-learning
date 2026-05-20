@@ -1,7 +1,9 @@
 __pycache__/
+*.pyc
 *.pth
 *.zip
-*.pyc
 .env
 venv/
 .venv/
+
+nailfold_work/raw/
