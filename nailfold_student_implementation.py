@@ -6,7 +6,7 @@ Student implementation inspired by Bharathi et al. (2023):
 in nailfold capillary images."
 
 This is a simplified implementation for coursework.
-I used the professors-provided folders:
+I used the professors provided folders:
 - Segmentation.zip: native images + binary masks
 - Density.zip: density images with 1 mm scale + native versions + count annotations
 
@@ -59,6 +59,7 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
 
 def seed_everything(seed: int = 42) -> None:
+    # Set random seeds for reproducibility
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -66,20 +67,24 @@ def seed_everything(seed: int = 42) -> None:
 
 
 def ensure_dir(path: Path) -> None:
+    # Create directory if it does not already exist
     path.mkdir(parents=True, exist_ok=True)
 
 
 def list_images(folder: Path) -> List[Path]:
+    # Return sorted image files from a folder
     return sorted([p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS])
 
 
 def unzip_file(zip_path: Path, out_dir: Path) -> None:
+    # Extract zip archive contents to a directory
     ensure_dir(out_dir)
     with zipfile.ZipFile(zip_path, "r") as zf:
         zf.extractall(out_dir)
 
 
 def load_image_gray(path: Path, size: int = 256) -> np.ndarray:
+    # Load an image as grayscale and normalize to 0-1
     img = Image.open(path).convert("L")
     img = img.resize((size, size))
     arr = np.array(img).astype(np.float32) / 255.0
@@ -87,6 +92,7 @@ def load_image_gray(path: Path, size: int = 256) -> np.ndarray:
 
 
 def load_mask_binary(path: Path, size: int = 256) -> np.ndarray:
+    # Load a binary mask and convert to 0/1 values
     mask = Image.open(path).convert("L")
     mask = mask.resize((size, size), Image.NEAREST)
     arr = np.array(mask).astype(np.float32)
@@ -95,6 +101,7 @@ def load_mask_binary(path: Path, size: int = 256) -> np.ndarray:
 
 
 def save_overlay(gray01: np.ndarray, mask01: np.ndarray, out_path: Path) -> None:
+    # Save an overlay image showing segmentation over the grayscale image
     base = (gray01 * 255).astype(np.uint8)
     base_bgr = cv2.cvtColor(base, cv2.COLOR_GRAY2BGR)
     mask = (mask01 > 0.5).astype(np.uint8)
@@ -105,7 +112,7 @@ def save_overlay(gray01: np.ndarray, mask01: np.ndarray, out_path: Path) -> None
 
 
 
-# Prepare professor data
+# Prepare professor data for segmentation and density evaluation
 
 
 def parse_density_ground_truth(pdf_path: Path, out_csv: Path) -> pd.DataFrame:
@@ -135,6 +142,7 @@ def parse_density_ground_truth(pdf_path: Path, out_csv: Path) -> pd.DataFrame:
 
 
 def prepare(args) -> None:
+    # Prepare raw and processed data folders for training and evaluation
     seed_everything(args.seed)
     work_dir = Path(args.work_dir)
     raw_dir = work_dir / "raw"
@@ -204,6 +212,7 @@ def prepare(args) -> None:
 
 
 class SegmentationDataset(Dataset):
+    # Dataset for segmentation images and corresponding masks
     def __init__(self, image_dir: Path, mask_dir: Path, size: int = 256):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
@@ -232,6 +241,7 @@ class SegmentationDataset(Dataset):
 
 
 class DoubleConv(nn.Module):
+    # Double convolution block used in U-Net encoder and decoder
     def __init__(self, in_ch: int, out_ch: int):
         super().__init__()
         self.net = nn.Sequential(
@@ -291,6 +301,7 @@ class UNet(nn.Module):
 
 
 class DiceBCELoss(nn.Module):
+    # Combined Dice and binary cross entropy loss for segmentation training
     def __init__(self):
         super().__init__()
         self.bce = nn.BCEWithLogitsLoss()
@@ -352,8 +363,9 @@ def skeletonize(mask: np.ndarray) -> np.ndarray:
 def calculate_measurements(mask01: np.ndarray) -> Dict[str, float]:
     """
     Simplified measurements calculated from the segmentation mask.
-    These are approximate, not clinical-grade measurements.
+    These are approximate, not clinical grade measurements.
     """
+    # Clean the segmentation mask and compute area, count, and width stats
     mask = clean_mask(mask01)
     area_px = int(mask.sum())
     num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
@@ -427,6 +439,7 @@ def estimate_scale_line_px(image_path: Path) -> float:
 
 
 def train(args) -> None:
+    # Train the U-Net model for segmentation using prepared data
     seed_everything(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
@@ -484,6 +497,7 @@ def train(args) -> None:
 
 
 def predict(args) -> None:
+    # Predict segmentation masks on the test set and save overlay images
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     prepared = Path(args.work_dir) / "prepared" / "segmentation"
     test_images = prepared / "test" / "images"
@@ -530,6 +544,7 @@ def density(args) -> None:
     Applies the trained segmentation model to native density images and compares detected component count
     to ground-truth capillary counts from GroundTruth.pdf.
     """
+    # Evaluate density images using the trained segmentation model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     work = Path(args.work_dir)
     raw_density = work / "raw" / "Density" / "DATA"
@@ -598,10 +613,11 @@ def density(args) -> None:
 
 
 
-# Main
+# Main entry point and argument parsing
 
 
 def parse_args():
+    # Parse command-line arguments for the script
     p = argparse.ArgumentParser()
     p.add_argument("--mode", choices=["prepare", "train", "predict", "density", "all"], required=True)
     p.add_argument("--seg_zip", default="Segmentation.zip")
